@@ -1,62 +1,44 @@
-#!/usr/bin/env python3
-"""Entry program for news-image-20261123 (entry5).
+"""Publish the finished news page image as this entry's output.
 
-The artwork for this entry -- a single picture summing up the world
-news of Monday 23 November 2026 -- is not drawn at run time. It was
-composed once, checked, and frozen as plain bytes in ``art.png``,
-stored next to this script in the repository.
+The page itself — a one-image summary of Monday 23 November 2026's
+world news — is finalised ahead of time and stored in this repository
+as ``art.png``.  This program simply copies that file into the output
+directory under the name the grader expects, ``entry.png``.
 
-This program's whole job is to deliver those bytes, untouched, to
-``entry.png`` inside the output directory. The output directory is
-read from the ``MAKEFUN_OUTPUT_DIR`` environment variable and falls
-back to ``/output`` when the variable is not set.
-
-Nothing here depends on the clock, on randomness, or on the network,
-so every run produces exactly the same output file: a byte-identical
-copy of ``art.png``.
+Only the Python standard library is used, there is no network access,
+and the copy is a plain byte-for-byte transfer, so running the
+program any number of times always yields the identical output file.
 """
 
 import os
 import shutil
 import sys
+from pathlib import Path
 
-# Directory this script lives in; the artwork sits beside it.
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-ARTWORK_PATH = os.path.join(SCRIPT_DIR, "art.png")
-
-# File name the grader expects inside the output directory.
-ENTRY_NAME = "entry.png"
+SOURCE_NAME = "art.png"
+OUTPUT_NAME = "entry.png"
+FALLBACK_OUTPUT_DIR = "/output"
 
 
-def pick_output_dir() -> str:
-    """Return the directory the entry image belongs in."""
-    return os.environ.get("MAKEFUN_OUTPUT_DIR") or "/output"
+def output_directory() -> Path:
+    """Return the directory the grader collects output from."""
+    configured = os.environ.get("MAKEFUN_OUTPUT_DIR")
+    if configured:
+        return Path(configured)
+    return Path(FALLBACK_OUTPUT_DIR)
 
 
-def run() -> int:
-    if not os.path.isfile(ARTWORK_PATH):
-        print(f"error: embedded artwork is missing: {ARTWORK_PATH}",
-              file=sys.stderr)
-        return 1
-
-    out_dir = pick_output_dir()
-    os.makedirs(out_dir, exist_ok=True)
-
-    destination = os.path.join(out_dir, ENTRY_NAME)
-    shutil.copyfile(ARTWORK_PATH, destination)
-
-    written = os.path.getsize(destination)
-    expected = os.path.getsize(ARTWORK_PATH)
-    if written != expected:
-        print(f"error: copy check failed: {destination} holds "
-              f"{written} bytes but art.png holds {expected}",
-              file=sys.stderr)
-        return 1
-
-    print(f"wrote {destination} ({written} bytes, verified identical "
-          f"to art.png)")
-    return 0
+def main() -> None:
+    source = Path(__file__).resolve().parent / SOURCE_NAME
+    if not source.is_file():
+        print(f"error: source image not found: {source}", file=sys.stderr)
+        sys.exit(1)
+    destination_dir = output_directory()
+    destination_dir.mkdir(parents=True, exist_ok=True)
+    destination = destination_dir / OUTPUT_NAME
+    shutil.copyfile(source, destination)
+    print(f"wrote {destination} ({destination.stat().st_size} bytes)")
 
 
 if __name__ == "__main__":
-    sys.exit(run())
+    main()
